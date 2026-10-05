@@ -32,5 +32,21 @@ public class Config {
                     "Default: true")
             .define("enableSoundEffects", true);
 
+    // Flower area settings (persisted across restarts)
+    public static final ModConfigSpec.EnumValue<FallingCherryPetalsMod.FlowerAreaMode> FLOWER_MODE = BUILDER
+            .comment("Flower generation mode: DYNAMIC_CANOPY, FIXED_4x4, or CIRCULAR_RADIUS",
+                    "Default: DYNAMIC_CANOPY")
+            .defineEnum("flowerMode", FallingCherryPetalsMod.FlowerAreaMode.DYNAMIC_CANOPY);
+
+    public static final ModConfigSpec.IntValue CANOPY_INSET = BUILDER
+            .comment("Canopy inset (empty margin) used only in DYNAMIC_CANOPY mode (0-4)",
+                    "Default: 1")
+            .defineInRange("canopyInset", 1, 0, 4);
+
+    public static final ModConfigSpec.IntValue CIRCULAR_RADIUS = BUILDER
+            .comment("Radius used only in CIRCULAR_RADIUS mode (2-6)",
+                    "Default: 3")
+            .defineInRange("circularRadius", 3, 2, 6);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

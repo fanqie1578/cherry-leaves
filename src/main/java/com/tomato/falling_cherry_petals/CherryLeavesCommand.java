@@ -93,29 +93,29 @@ public class CherryLeavesCommand {
             }
         }
 
-        FallingCherryPetalsMod.flowerMode = newMode;
+        Config.FLOWER_MODE.set(newMode);
         source.sendSuccess(() -> Component.literal("§a✔ 花簇生成模式已切换为: §e" + displayName), true);
         return 1;
     }
 
     private static int setInset(CommandSourceStack source, int value) {
-        FallingCherryPetalsMod.canopyInset = value;
+        Config.CANOPY_INSET.set(value);
         source.sendSuccess(() -> Component.literal("§a✔ 樱花留空值已设为: §e" + value + " 格"), true);
         return 1;
     }
 
     private static int setRadius(CommandSourceStack source, int value) {
-        FallingCherryPetalsMod.circularRadius = value;
+        Config.CIRCULAR_RADIUS.set(value);
         source.sendSuccess(() -> Component.literal("§a✔ 圆形半径已设为: §e" + value + " 格"), true);
         return 1;
     }
 
     private static int showConfig(CommandSourceStack source) {
         String modeDisplay;
-        switch (FallingCherryPetalsMod.flowerMode) {
-            case DYNAMIC_CANOPY -> modeDisplay = "随树叶大小定 (留空=" + FallingCherryPetalsMod.canopyInset + ")";
+        switch (Config.FLOWER_MODE.get()) {
+            case DYNAMIC_CANOPY -> modeDisplay = "随树叶大小定 (留空=" + Config.CANOPY_INSET.get() + ")";
             case FIXED_4x4 -> modeDisplay = "固定范围4x4";
-            case CIRCULAR_RADIUS -> modeDisplay = "圆形半径 (半径=" + FallingCherryPetalsMod.circularRadius + ")";
+            case CIRCULAR_RADIUS -> modeDisplay = "圆形半径 (半径=" + Config.CIRCULAR_RADIUS.get() + ")";
             default -> modeDisplay = "未知";
         }
 
@@ -125,7 +125,7 @@ public class CherryLeavesCommand {
                 §7樱花留空值:   §f%d (仅 DYNAMIC_CANOPY 模式生效)
                 §7圆形半径:     §f%d (仅 CIRCULAR_RADIUS 模式生效)
                 §6===============================
-                """.formatted(modeDisplay, FallingCherryPetalsMod.canopyInset, FallingCherryPetalsMod.circularRadius);
+                """.formatted(modeDisplay, Config.CANOPY_INSET.get(), Config.CIRCULAR_RADIUS.get());
 
         source.sendSuccess(() -> Component.literal(info), false);
         return 1;

@@ -63,9 +63,7 @@ public class FallingCherryPetalsMod {
         FIXED_4x4,      // 固定范围4x4
         CIRCULAR_RADIUS // 圆形半径范围
     }
-    public static FlowerAreaMode flowerMode = FlowerAreaMode.DYNAMIC_CANOPY;
-    public static int canopyInset = 1;       // 留空值 0-4 (仅 DYNAMIC_CANOPY 模式)
-    public static int circularRadius = 3;    // 圆形半径 (用于 CIRCULAR_RADIUS 模式)
+    // Mode / inset / radius are persisted in the mod config file (see Config.java)
 
     public static final DeferredRegister<Feature<?>> FEATURES = DeferredRegister.create(Registries.FEATURE, MODID);
     public static final DeferredHolder<Feature<?>, Feature<?>> CHERRY_LEAF_FEATURE = FEATURES.register("cherry_leaf_pile",
@@ -388,21 +386,21 @@ public class FallingCherryPetalsMod {
         // ====== Calculate flower area based on mode ======
         int flowerMinX, flowerMaxX, flowerMinZ, flowerMaxZ;
 
-        if (flowerMode == FlowerAreaMode.DYNAMIC_CANOPY) {
-            int[] canopyBounds = findCanopyBounds(level, treeBase, allTrees);
+        if (Config.FLOWER_MODE.get() == FlowerAreaMode.DYNAMIC_CANOPY) {
+            int[] canopyBounds = findCanopyBounds(level, treeBase, nearbyTrees(treeBase, allTrees));
             if (canopyBounds == null) return;
-            int inset = Math.max(0, Math.min(canopyInset, 4));
+            int inset = Math.max(0, Math.min(Config.CANOPY_INSET.get(), 4));
             flowerMinX = canopyBounds[0] + inset;
             flowerMaxX = canopyBounds[1] - inset;
             flowerMinZ = canopyBounds[2] + inset;
             flowerMaxZ = canopyBounds[3] - inset;
-        } else if (flowerMode == FlowerAreaMode.FIXED_4x4) {
+        } else if (Config.FLOWER_MODE.get() == FlowerAreaMode.FIXED_4x4) {
             flowerMinX = treeBase.getX() - 2;
             flowerMaxX = treeBase.getX() + 2;
             flowerMinZ = treeBase.getZ() - 2;
             flowerMaxZ = treeBase.getZ() + 2;
-        } else if (flowerMode == FlowerAreaMode.CIRCULAR_RADIUS) {
-            int r = circularRadius;
+        } else if (Config.FLOWER_MODE.get() == FlowerAreaMode.CIRCULAR_RADIUS) {
+            int r = Config.CIRCULAR_RADIUS.get();
             flowerMinX = treeBase.getX() - r;
             flowerMaxX = treeBase.getX() + r;
             flowerMinZ = treeBase.getZ() - r;
@@ -423,10 +421,10 @@ public class FallingCherryPetalsMod {
         for (int fx = flowerMinX; fx <= flowerMaxX; fx++) {
             for (int fz = flowerMinZ; fz <= flowerMaxZ; fz++) {
                 // Circular distance check for CIRCULAR_RADIUS mode
-                if (flowerMode == FlowerAreaMode.CIRCULAR_RADIUS) {
+                if (Config.FLOWER_MODE.get() == FlowerAreaMode.CIRCULAR_RADIUS) {
                     double dx = fx - treeBase.getX();
                     double dz = fz - treeBase.getZ();
-                    if (dx * dx + dz * dz > circularRadius * circularRadius) continue;
+                    if (dx * dx + dz * dz > Config.CIRCULAR_RADIUS.get() * Config.CIRCULAR_RADIUS.get()) continue;
                 }
 
                 // 60% chance to skip for natural-looking gaps
@@ -459,6 +457,27 @@ public class FallingCherryPetalsMod {
                 }
             }
         }
+    }
+
+    /**
+     * Collects only the trees near enough to compete with this tree for a
+     * canopy column. Trees farther than 2*CANOPY_SCAN_RADIUS can never be the
+     * nearest tree to any point inside the scan area, so they are skipped.
+     * This reduces the Voronoi check from O(N) per column to O(nearby).
+     */
+    private static Set<BlockPos> nearbyTrees(BlockPos treeBase, Set<BlockPos> allTrees) {
+        final int radius = 2 * CANOPY_SCAN_RADIUS + 2;
+        final int radiusSq = radius * radius;
+        Set<BlockPos> nearby = new HashSet<>();
+        int bx = treeBase.getX();
+        int bz = treeBase.getZ();
+        for (BlockPos other : allTrees) {
+            if (other.equals(treeBase)) continue;
+            int dx = other.getX() - bx;
+            int dz = other.getZ() - bz;
+            if (dx * dx + dz * dz <= radiusSq) nearby.add(other);
+        }
+        return nearby;
     }
 
     /**
@@ -826,13 +845,13 @@ public class FallingCherryPetalsMod {
         // Calculate flower area based on mode
         int flowerMinX, flowerMaxX, flowerMinZ, flowerMaxZ;
 
-        if (flowerMode == FlowerAreaMode.DYNAMIC_CANOPY) {
-            int[] canopyBounds = findCanopyBounds(level, treePos, allTrees);
+        if (Config.FLOWER_MODE.get() == FlowerAreaMode.DYNAMIC_CANOPY) {
+            int[] canopyBounds = findCanopyBounds(level, treePos, nearbyTrees(treePos, allTrees));
             if (canopyBounds == null) {
                 issues.add("未找到树冠 (树木可能太小)");
                 return new TreeVerifyResult(treePos, true, 0, 0, 0, 0, 0, issues);
             }
-            int inset = Math.max(0, Math.min(canopyInset, 4));
+            int inset = Math.max(0, Math.min(Config.CANOPY_INSET.get(), 4));
             flowerMinX = canopyBounds[0] + inset;
             flowerMaxX = canopyBounds[1] - inset;
             flowerMinZ = canopyBounds[2] + inset;
@@ -843,13 +862,13 @@ public class FallingCherryPetalsMod {
             if (width < 2 || depth < 2) {
                 issues.add("树冠范围过小 (" + width + "x" + depth + ")，考虑减小留空值");
             }
-        } else if (flowerMode == FlowerAreaMode.FIXED_4x4) {
+        } else if (Config.FLOWER_MODE.get() == FlowerAreaMode.FIXED_4x4) {
             flowerMinX = treePos.getX() - 2;
             flowerMaxX = treePos.getX() + 2;
             flowerMinZ = treePos.getZ() - 2;
             flowerMaxZ = treePos.getZ() + 2;
-        } else if (flowerMode == FlowerAreaMode.CIRCULAR_RADIUS) {
-            int r = circularRadius;
+        } else if (Config.FLOWER_MODE.get() == FlowerAreaMode.CIRCULAR_RADIUS) {
+            int r = Config.CIRCULAR_RADIUS.get();
             flowerMinX = treePos.getX() - r;
             flowerMaxX = treePos.getX() + r;
             flowerMinZ = treePos.getZ() - r;
@@ -872,10 +891,10 @@ public class FallingCherryPetalsMod {
 
         for (int fx = flowerMinX; fx <= flowerMaxX; fx++) {
             for (int fz = flowerMinZ; fz <= flowerMaxZ; fz++) {
-                if (flowerMode == FlowerAreaMode.CIRCULAR_RADIUS) {
+                if (Config.FLOWER_MODE.get() == FlowerAreaMode.CIRCULAR_RADIUS) {
                     double dx = fx - treePos.getX();
                     double dz = fz - treePos.getZ();
-                    if (dx * dx + dz * dz > circularRadius * circularRadius) continue;
+                    if (dx * dx + dz * dz > Config.CIRCULAR_RADIUS.get() * Config.CIRCULAR_RADIUS.get()) continue;
                 }
 
                 BlockPos surface = findSurfaceAt(level, fx, fz, hintY);
@@ -947,17 +966,17 @@ public class FallingCherryPetalsMod {
         }
 
         // Generate suggestions
-        if (flowerMode == FlowerAreaMode.DYNAMIC_CANOPY && canopyInset > 1) {
-            report.suggestions.add("尝试减小留空值: /cherry-leaves config inset " + (canopyInset - 1));
+        if (Config.FLOWER_MODE.get() == FlowerAreaMode.DYNAMIC_CANOPY && Config.CANOPY_INSET.get() > 1) {
+            report.suggestions.add("尝试减小留空值: /cherry-leaves config inset " + (Config.CANOPY_INSET.get() - 1));
         }
-        if (flowerMode == FlowerAreaMode.DYNAMIC_CANOPY && canopyInset > 0) {
+        if (Config.FLOWER_MODE.get() == FlowerAreaMode.DYNAMIC_CANOPY && Config.CANOPY_INSET.get() > 0) {
             report.suggestions.add("尝试将留空设为0: /cherry-leaves config inset 0");
         }
-        if (flowerMode == FlowerAreaMode.FIXED_4x4) {
+        if (Config.FLOWER_MODE.get() == FlowerAreaMode.FIXED_4x4) {
             report.suggestions.add("尝试切换为 DYNAMIC_CANOPY 模式以适配树冠大小");
         }
-        if (flowerMode == FlowerAreaMode.CIRCULAR_RADIUS && circularRadius < 6) {
-            report.suggestions.add("尝试增大半径: /cherry-leaves config radius " + (circularRadius + 1));
+        if (Config.FLOWER_MODE.get() == FlowerAreaMode.CIRCULAR_RADIUS && Config.CIRCULAR_RADIUS.get() < 6) {
+            report.suggestions.add("尝试增大半径: /cherry-leaves config radius " + (Config.CIRCULAR_RADIUS.get() + 1));
         }
         report.suggestions.add("尝试手动重置: /cherry-leaves reload");
     }
