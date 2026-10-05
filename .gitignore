@@ -29,4 +29,7 @@ crash-reports/
 # Eclipse
 .eclipse/
 .settings/
-!*.jar
+
+# Built artifacts — do not commit release jars (keep only the gradle wrapper jar)
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
